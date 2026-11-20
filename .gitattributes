@@ -1,0 +1,13 @@
+* text=auto
+
+# Files consumed by Linux/Buildroot must retain LF endings.
+*.sh text eol=lf
+S50systemui-hmi text eol=lf
+S51can-status-hmi text eol=lf
+S95usbcan-gateway text eol=lf
+*.c text eol=lf
+*.h text eol=lf
+*.cpp text eol=lf
+*.pro text eol=lf
+*.md text eol=lf
+*.json text eol=lf

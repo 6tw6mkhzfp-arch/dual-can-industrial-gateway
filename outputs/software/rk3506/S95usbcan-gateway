@@ -1,0 +1,77 @@
+#!/bin/sh
+
+BIN=/userdata/usbcan_gateway/usbcan_gateway
+PID=/var/run/usbcan_gateway.pid
+CHILD_PID=/var/run/usbcan_gateway.child.pid
+LOG=/var/log/usbcan_gateway.log
+ARCHIVE_DIR=/userdata/usbcan_gateway/logs
+MAX_LOG_BYTES=2097152
+
+rotate_logs() {
+    mkdir -p "$ARCHIVE_DIR"
+    while :; do
+        sleep 30
+        [ -f "$LOG" ] || continue
+        size=$(wc -c <"$LOG" 2>/dev/null) || continue
+        [ "$size" -ge "$MAX_LOG_BYTES" ] || continue
+        rm -f "$ARCHIVE_DIR/usbcan_gateway.2.log"
+        [ ! -f "$ARCHIVE_DIR/usbcan_gateway.1.log" ] || \
+            mv "$ARCHIVE_DIR/usbcan_gateway.1.log" \
+               "$ARCHIVE_DIR/usbcan_gateway.2.log"
+        cp "$LOG" "$ARCHIVE_DIR/usbcan_gateway.1.log" && : >"$LOG"
+        echo "$(date '+%F %T') log rotated" >>"$LOG"
+    done
+}
+
+start_service() {
+    [ -x "$BIN" ] || { echo "$BIN not installed"; return 1; }
+    if [ -s "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; then
+        echo "usbcan_gateway already running"
+        return 0
+    fi
+    echo "Starting usbcan_gateway supervisor"
+    (
+        child=""
+        rotator=""
+        trap '[ -n "$child" ] && kill "$child" 2>/dev/null; [ -n "$rotator" ] && kill "$rotator" 2>/dev/null; rm -f "$CHILD_PID"; exit 0' TERM INT
+        rotate_logs &
+        rotator=$!
+        while :; do
+            "$BIN" >>"$LOG" 2>&1 &
+            child=$!
+            echo "$child" >"$CHILD_PID"
+            wait "$child"
+            rc=$?
+            rm -f "$CHILD_PID"
+            echo "usbcan_gateway exited rc=$rc; restarting in 2 seconds" >>"$LOG"
+            sleep 2
+        done
+    ) &
+    echo $! >"$PID"
+}
+
+stop_service() {
+    if [ -s "$PID" ]; then
+        pid=$(cat "$PID")
+        kill "$pid" 2>/dev/null || true
+    fi
+    if [ -s "$CHILD_PID" ]; then
+        kill "$(cat "$CHILD_PID")" 2>/dev/null || true
+    fi
+    rm -f "$PID" "$CHILD_PID"
+}
+
+case "$1" in
+    start) start_service ;;
+    stop) stop_service ;;
+    restart) stop_service; sleep 1; start_service ;;
+    status)
+        if [ -s "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; then
+            echo "running pid=$(cat "$PID")"
+        else
+            echo "stopped"
+            exit 1
+        fi
+        ;;
+    *) echo "Usage: $0 {start|stop|restart|status}"; exit 2 ;;
+esac

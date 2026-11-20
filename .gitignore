@@ -1,0 +1,19 @@
+# Local investigation artifacts, packet captures, vendor packages and screenshots
+/work/
+
+# STM32 build products and flash backups
+/outputs/firmware/stm32/build/
+
+# Cross-compiled deployable binaries (rebuild from source/toolchain)
+/outputs/software/rk3506/can-status-hmi
+/outputs/software/rk3506/can-status-hmi-dual
+/outputs/software/rk3506/can-status-hmi-industrial
+/outputs/software/rk3506/usbcan_gateway_dual
+/outputs/software/rk3506/usbcan_probe_armv7
+
+# Common editor and OS files
+.DS_Store
+Thumbs.db
+*.user
+*.swp
+*~

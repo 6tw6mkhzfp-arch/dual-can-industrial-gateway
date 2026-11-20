@@ -1,0 +1,81 @@
+#!/bin/sh
+
+PATH="/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
+[ -r /etc/profile ] && . /etc/profile
+
+HMI=/userdata/usbcan_gateway/can-status-hmi
+HMI_PID=/var/run/can-status-hmi.pid
+HMI_LOG=/var/log/can-status-hmi.log
+FAN=/userdata/usbcan_gateway/fan-controller.sh
+FAN_PID=/var/run/fan-controller.pid
+
+start_gateway_later()
+{
+    (
+        i=0
+        while ! lsusb 2>/dev/null | grep -q '0471:1200' && [ "$i" -lt 30 ]; do
+            sleep 1
+            i=$((i + 1))
+        done
+        /etc/init.d/S95usbcan-gateway start >>"$HMI_LOG" 2>&1 || true
+    ) &
+}
+
+start_systemui()
+{
+    counter=0
+    while [ ! -S /run/wayland-0 ] && [ "$counter" -lt 50 ]; do
+        sleep 0.1
+        counter=$((counter + 1))
+    done
+
+    start_gateway_later
+
+    if [ -x "$FAN" ]; then
+        "$FAN" >>/var/log/fan-controller.log 2>&1 &
+        echo $! >"$FAN_PID"
+    fi
+
+    if [ -x "$HMI" ] && [ -S /run/wayland-0 ]; then
+        # Start last so the CAN status page is the visible fullscreen client.
+        sleep 1
+        XDG_RUNTIME_DIR=/run WAYLAND_DISPLAY=wayland-0 QT_QPA_PLATFORM=wayland \
+            "$HMI" >>"$HMI_LOG" 2>&1 &
+        echo $! >"$HMI_PID"
+    fi
+}
+
+stop_systemui()
+{
+    if [ -s "$FAN_PID" ]; then
+        kill "$(cat "$FAN_PID")" 2>/dev/null || true
+    fi
+    if [ -s "$HMI_PID" ]; then
+        kill "$(cat "$HMI_PID")" 2>/dev/null || true
+    fi
+    killall can-status-hmi controlcenter systemui 2>/dev/null || true
+    rm -f "$HMI_PID" "$FAN_PID"
+}
+
+case "$1" in
+    start)
+        echo -n 'starting systemui and CAN HMI... '
+        start_systemui
+        echo 'done.'
+        ;;
+    stop)
+        echo -n 'stopping systemui and CAN HMI... '
+        stop_systemui
+        echo 'done.'
+        ;;
+    restart|reload)
+        stop_systemui
+        sleep 0.3
+        start_systemui
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+esac
+
+exit 0

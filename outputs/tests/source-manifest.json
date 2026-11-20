@@ -1,0 +1,26 @@
+{
+  "date": "2026-09-06",
+  "method": "static file review; no vendor binaries executed",
+  "files": [
+    {
+      "path": "D:\\RK3506B\\【正点原子】RK3506B开发板\\开发板网盘A盘-基础资料\\02、原理图\\01、底板原理图\\ATK-DLRK3506B V1.0.pdf",
+      "bytes": 1806914,
+      "sha256": "c8149792d62e7bb8e03395255dddbff7804db22e47a9f8a725949cf2abbf6847"
+    },
+    {
+      "path": "E:\\USB转CAN驱动\\驱动补丁（WIN ZLGCAN出现感叹号时安装）\\Linux\\USBCAN-I_II_I+_II+_2A_I-mini_Linux_Drivers.rar",
+      "bytes": 87657,
+      "sha256": "6603a235d6fadef4c8421564ab4d1d77e4a9dacc18153e599ef143ce995ee9dc"
+    },
+    {
+      "path": "D:\\Codex\\dual-can-industrial-gateway\\work\\inspection\\x64\\test\\libusbcan.so",
+      "bytes": 93667,
+      "sha256": "967b0d066b76f7f34cc9d2b334ddce8f244a57d119867b9bfc534bf84b9c2c44"
+    },
+    {
+      "path": "D:\\Codex\\dual-can-industrial-gateway\\work\\inspection\\x86\\test\\libusbcan.so",
+      "bytes": 90523,
+      "sha256": "2658005b70d35d97544946f2184e946d034a1d42c33b2520bbe55faa66af6225"
+    }
+  ]
+}

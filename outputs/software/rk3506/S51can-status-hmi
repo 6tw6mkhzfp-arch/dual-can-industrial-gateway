@@ -1,0 +1,55 @@
+#!/bin/sh
+
+BASE=/userdata/usbcan_gateway
+HMI="$BASE/can-status-hmi"
+PIDFILE=/var/run/can-status-hmi.pid
+LOG=/var/log/can-status-hmi.log
+
+start_gateway_later() {
+    (
+        i=0
+        while ! lsusb 2>/dev/null | grep -q '0471:1200' && [ "$i" -lt 30 ]; do
+            sleep 1
+            i=$((i + 1))
+        done
+        /etc/init.d/S95usbcan-gateway start >>"$LOG" 2>&1 || true
+    ) &
+}
+
+start_hmi() {
+    echo -n 'Starting CAN status HMI: '
+    start_gateway_later
+
+    i=0
+    while [ ! -S /run/wayland-0 ] && [ "$i" -lt 50 ]; do
+        sleep 0.1
+        i=$((i + 1))
+    done
+
+    if [ ! -S /run/wayland-0 ]; then
+        echo 'Wayland not ready'
+        return 1
+    fi
+
+    XDG_RUNTIME_DIR=/run WAYLAND_DISPLAY=wayland-0 QT_QPA_PLATFORM=wayland \
+        "$HMI" >>"$LOG" 2>&1 &
+    echo $! >"$PIDFILE"
+    echo "OK (pid $!)"
+}
+
+stop_hmi() {
+    echo -n 'Stopping CAN status HMI: '
+    if [ -s "$PIDFILE" ]; then
+        kill "$(cat "$PIDFILE")" 2>/dev/null || true
+    fi
+    killall can-status-hmi 2>/dev/null || true
+    rm -f "$PIDFILE"
+    echo OK
+}
+
+case "$1" in
+    start) start_hmi ;;
+    stop) stop_hmi ;;
+    restart) stop_hmi; start_hmi ;;
+    *) echo "Usage: $0 {start|stop|restart}"; exit 1 ;;
+esac
